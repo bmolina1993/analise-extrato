@@ -195,6 +195,20 @@ HTML_TEMPLATE = '''
             <p>Renda Média Aproximada: R$ {{ r['renda_media_aproximada'] }}</p>
             <p>Qtd de Entradas: {{ r['qtd_entradas'] }}</p>
             <p>Qtd de Saídas: {{ r['qtd_saidas'] }}</p>
+            <p class="fw-bold">Autenticidade: 
+              {% if r['autenticidade'] == 'verdadeiro' %}
+                <span class="text-success">{{ r['autenticidade'] }}</span>
+              {% else %}
+                <span class="text-danger">{{ r['autenticidade'] }}</span>
+              {% endif %}
+            </p>
+            {% if r['motivos'] %}
+            <ul class="text-danger">
+              {% for motivo in r['motivos'] %}
+                <li>{{ motivo }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
