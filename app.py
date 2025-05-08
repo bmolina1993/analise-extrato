@@ -15,6 +15,60 @@ app.secret_key = 'your_secret_key_here'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# HTML com Bootstrap
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Análise de Extratos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="p-4">
+<div class="container">
+    <h1 class="mb-4">Upload de Extratos Bancários</h1>
+    <a href="/logout" class="btn btn-outline-danger float-end">Sair</a>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <input class="form-control" type="file" name="files" multiple required>
+        </div>
+        <button class="btn btn-primary" type="submit">Analisar</button>
+    </form>
+
+    {% if resultados %}
+    <h2 class="mt-5">Resultados:</h2>
+    {% for r in resultados %}
+    <div class="card mt-3">
+        <div class="card-body">
+            <h5 class="card-title">Arquivo: {{ r['arquivo'] }}</h5>
+            <p>Total de Entradas: R$ {{ r['total_entradas'] }}</p>
+            <p>Total de Saídas: R$ {{ r['total_saidas'] }}</p>
+            <p>Renda Média Aproximada: R$ {{ r['renda_media_aproximada'] }}</p>
+            <p>Qtd de Entradas: {{ r['qtd_entradas'] }}</p>
+            <p>Qtd de Saídas: {{ r['qtd_saidas'] }}</p>
+            <p class="fw-bold">Autenticidade: 
+              {% if r['autenticidade'] == 'verdadeiro' %}
+                <span class="text-success">{{ r['autenticidade'] }}</span>
+              {% else %}
+                <span class="text-danger">{{ r['autenticidade'] }}</span>
+              {% endif %}
+            </p>
+            {% if r['motivos'] %}
+            <ul class="text-danger">
+              {% for motivo in r['motivos'].split(' | ') if motivo %}
+                <li>{{ motivo }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+</body>
+</html>
+'''
+
 # Inicializa banco de dados
 def init_db():
     with sqlite3.connect('users.db') as conn:
@@ -37,58 +91,6 @@ def init_db():
             data_analisada TEXT
         )''')
 init_db()
-
-# Decorador de login
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            return redirect(url_for('user_login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-# Autenticação
-def get_user(username):
-    with sqlite3.connect('users.db') as conn:
-        cur = conn.execute("SELECT * FROM users WHERE username = ?", (username,))
-        return cur.fetchone()
-
-def create_user(username, password):
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    try:
-        with sqlite3.connect('users.db') as conn:
-            conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
-        return True
-    except sqlite3.IntegrityError:
-        return False
-
-def check_password(password, password_hash):
-    return bcrypt.checkpw(password.encode('utf-8'), password_hash)
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if create_user(username, password):
-            return redirect(url_for('user_login'))
-        else:
-            return 'Usuário já existe. <a href="/register">Tente novamente</a>'
-    return '''<h2>Cadastro</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Cadastrar"></form>'''
-
-@app.route('/login', methods=['GET', 'POST'])
-def user_login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = get_user(username)
-        if user and check_password(password, user[2]):
-            session['logged_in'] = True
-            session['username'] = username
-            return redirect(url_for('index'))
-        else:
-            return '<h3>Login inválido</h3><a href="/login">Tentar novamente</a>'
-    return '''<h2>Login</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Entrar"></form><p>Ou <a href="/register">cadastre-se</a></p>'''
 
 # Extração e análise dos PDFs
 def extract_text_from_pdf(path):
