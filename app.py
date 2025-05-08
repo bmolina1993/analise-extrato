@@ -32,6 +32,8 @@ def init_db():
             renda_media REAL,
             qtd_entradas INTEGER,
             qtd_saidas INTEGER,
+            autenticidade TEXT,
+            motivos TEXT,
             data_analisada TEXT
         )''')
 init_db()
@@ -72,14 +74,7 @@ def register():
             return redirect(url_for('user_login'))
         else:
             return 'Usuário já existe. <a href="/register">Tente novamente</a>'
-    return '''
-    <h2>Cadastro</h2>
-    <form method="post">
-        Usuário: <input type="text" name="username"><br>
-        Senha: <input type="password" name="password"><br>
-        <input type="submit" value="Cadastrar">
-    </form>
-    '''
+    return '''<h2>Cadastro</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Cadastrar"></form>'''
 
 @app.route('/login', methods=['GET', 'POST'])
 def user_login():
@@ -93,15 +88,7 @@ def user_login():
             return redirect(url_for('index'))
         else:
             return '<h3>Login inválido</h3><a href="/login">Tentar novamente</a>'
-    return '''
-    <h2>Login</h2>
-    <form method="post">
-        Usuário: <input type="text" name="username"><br>
-        Senha: <input type="password" name="password"><br>
-        <input type="submit" value="Entrar">
-    </form>
-    <p>Ou <a href="/register">cadastre-se</a></p>
-    '''
+    return '''<h2>Login</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Entrar"></form><p>Ou <a href="/register">cadastre-se</a></p>'''
 
 # Extração e análise dos PDFs
 def extract_text_from_pdf(path):
@@ -126,7 +113,7 @@ def analyze_text(text):
     suspeitas = []
 
     for idx in range(len(lines)):
-        bloco = " ".join(lines[idx:idx+3])  # junta até 3 linhas
+        bloco = " ".join(lines[idx:idx+3])
         bloco_lower = bloco.lower()
 
         if 'pix recebida' in bloco_lower or 'transferência recebida' in bloco_lower:
@@ -164,64 +151,10 @@ def analyze_text(text):
         'motivos': suspeitas
     }
 
-# HTML com Bootstrap
-HTML_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Análise de Extratos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="p-4">
-<div class="container">
-    <h1 class="mb-4">Upload de Extratos Bancários</h1>
-    <a href="/logout" class="btn btn-outline-danger float-end">Sair</a>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <div class="mb-3">
-            <input class="form-control" type="file" name="files" multiple required>
-        </div>
-        <button class="btn btn-primary" type="submit">Analisar</button>
-    </form>
-
-    {% if resultados %}
-    <h2 class="mt-5">Resultados:</h2>
-    {% for r in resultados %}
-    <div class="card mt-3">
-        <div class="card-body">
-            <h5 class="card-title">Arquivo: {{ r['arquivo'] }}</h5>
-            <p>Total de Entradas: R$ {{ r['total_entradas'] }}</p>
-            <p>Total de Saídas: R$ {{ r['total_saidas'] }}</p>
-            <p>Renda Média Aproximada: R$ {{ r['renda_media_aproximada'] }}</p>
-            <p>Qtd de Entradas: {{ r['qtd_entradas'] }}</p>
-            <p>Qtd de Saídas: {{ r['qtd_saidas'] }}</p>
-            <p class="fw-bold">Autenticidade: 
-              {% if r['autenticidade'] == 'verdadeiro' %}
-                <span class="text-success">{{ r['autenticidade'] }}</span>
-              {% else %}
-                <span class="text-danger">{{ r['autenticidade'] }}</span>
-              {% endif %}
-            </p>
-            {% if r['motivos'] %}
-            <ul class="text-danger">
-              {% for motivo in r['motivos'] %}
-                <li>{{ motivo }}</li>
-              {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-</div>
-</body>
-</html>
-'''
-
 @app.route('/')
 @login_required
 def index():
-    return render_template_string(HTML_TEMPLATE, resultados=None)
+    return redirect(url_for('historico'))
 
 @app.route('/upload', methods=['POST'])
 @login_required
@@ -238,13 +171,29 @@ def upload_files():
         resultado['arquivo'] = filename
         resultados.append(resultado)
 
-        # Salvar no histórico
         with sqlite3.connect('users.db') as conn:
-            conn.execute('''INSERT INTO historico (username, arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, data_analisada)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+            conn.execute('''INSERT INTO historico (username, arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, autenticidade, motivos, data_analisada)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                          (username, filename, resultado['total_entradas'], resultado['total_saidas'], resultado['renda_media_aproximada'],
-                          resultado['qtd_entradas'], resultado['qtd_saidas'], datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                          resultado['qtd_entradas'], resultado['qtd_saidas'], resultado['autenticidade'], " | ".join(resultado['motivos']), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+
+    session['resultados'] = resultados
+    return redirect(url_for('resultado'))
+
+@app.route('/resultado')
+@login_required
+def resultado():
+    resultados = session.pop('resultados', [])
     return render_template_string(HTML_TEMPLATE, resultados=resultados)
+
+@app.route('/historico')
+@login_required
+def historico():
+    username = session.get('username')
+    with sqlite3.connect('users.db') as conn:
+        cur = conn.execute("SELECT arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, autenticidade, motivos, data_analisada FROM historico WHERE username = ? ORDER BY data_analisada DESC", (username,))
+        dados = [dict(zip([column[0] for column in cur.description], row)) for row in cur.fetchall()]
+    return render_template_string(HTML_TEMPLATE, resultados=dados)
 
 @app.route('/logout')
 def logout():
