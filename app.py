@@ -123,30 +123,30 @@ def analyze_text(text):
     lines = text.splitlines()
     entradas, saidas = [], []
     suspeitas = []
+    contexto = None  # entrada ou saida
 
-    for idx in range(len(lines)):
-        bloco = " ".join(lines[idx:idx+3])
-        bloco_lower = bloco.lower()
+    for i, line in enumerate(lines):
+        l = line.lower()
+        if 'pix recebida' in l or 'transferência recebida' in l:
+            contexto = 'entrada'
+        elif any(p in l for p in ['pix enviada', 'pagamento', 'retirado', 'reserva']):
+            contexto = 'saida'
 
-        if 'pix recebida' in bloco_lower or 'transferência recebida' in bloco_lower:
-            for s in bloco.split():
+        # procura valor R$ na linha
+        if 'r$' in l:
+            for s in line.split():
                 if 'r$' in s.lower():
                     try:
                         valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                        if valor < 0:
-                            suspeitas.append("Entrada com valor negativo: R$ {:.2f}".format(valor))
-                        entradas.append(abs(valor))
-                        break
-                    except:
-                        continue
-        elif ('pix enviada' in bloco_lower or 'pagamento' in bloco_lower or 'retirado' in bloco_lower or 'reserva' in bloco_lower):
-            for s in bloco.split():
-                if 'r$' in s.lower():
-                    try:
-                        valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                        if valor > 0:
-                            suspeitas.append("Saída com valor positivo: R$ {:.2f}".format(valor))
-                        saidas.append(abs(valor))
+                        if contexto == 'entrada':
+                            if valor < 0:
+                                suspeitas.append(f"Entrada com valor negativo: R$ {valor:.2f}")
+                            entradas.append(abs(valor))
+                        elif contexto == 'saida':
+                            if valor > 0:
+                                suspeitas.append(f"Saída com valor positivo: R$ {valor:.2f}")
+                            saidas.append(abs(valor))
+                        contexto = None  # reset após uso
                         break
                     except:
                         continue
