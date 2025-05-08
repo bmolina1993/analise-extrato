@@ -92,6 +92,16 @@ def init_db():
         )''')
 init_db()
 
+# Decorador de login
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return redirect(url_for('user_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Extração e análise dos PDFs
 def extract_text_from_pdf(path):
     text = ""
