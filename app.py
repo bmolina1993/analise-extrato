@@ -212,6 +212,51 @@ def logout():
     session.clear()
     return redirect(url_for('user_login'))
 
+@app.route('/login', methods=['GET', 'POST'])
+def user_login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = get_user(username)
+        if user and check_password(password, user[2]):
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        else:
+            return '<h3>Login inválido</h3><a href="/login">Tentar novamente</a>'
+    return '''<h2>Login</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Entrar"></form><p>Ou <a href="/register">cadastre-se</a></p>'''
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if create_user(username, password):
+            return redirect(url_for('user_login'))
+        else:
+            return 'Usuário já existe. <a href="/register">Tente novamente</a>'
+    return '''<h2>Cadastro</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Cadastrar"></form>'''
+
+
+def get_user(username):
+    with sqlite3.connect('users.db') as conn:
+        cur = conn.execute("SELECT * FROM users WHERE username = ?", (username,))
+        return cur.fetchone()
+
+def create_user(username, password):
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    try:
+        with sqlite3.connect('users.db') as conn:
+            conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+def check_password(password, password_hash):
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash)
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
