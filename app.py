@@ -123,30 +123,18 @@ def extract_text_from_pdf(path):
 def analyze_text(text):
     lines = text.splitlines()
     entradas, saidas = [], []
-    for line in lines:
-        if 'Pix recebido' in line or 'Transferência recebida' in line:
-            for s in line.split():
-                if 'R$' in s:
-                    try:
-                        valor = float(s.replace('R$', '').replace('.', '').replace(',', '.'))
-                        entradas.append(valor)
-                    except:
-                        continue
-        elif 'Pix enviado' in line or 'Pagamento' in line:
-            for s in line.split():
-                if 'R$' in s:
-                    try:
-                        valor = float(s.replace('R$', '').replace('.', '').replace(',', '.'))
-                        saidas.append(valor)
-                    except:
-                        continue
-    return {
-        'total_entradas': sum(entradas),
-        'total_saidas': sum(saidas),
-        'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
-        'qtd_entradas': len(entradas),
-        'qtd_saidas': len(saidas)
-    }
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        line_lower = line.lower()
+        valor = None
+
+        # Verifica se a linha indica entrada
+        if 'pix recebida' in line_lower or 'transferência recebida' in line_lower:
+            j = i
+            while j <= i + 3 and j < len(lines):  # procura em até 3 linhas seguintes
+                if 'r$' in lines[j].lower():
+                    for s in lines[j].split(
 
 # HTML com Bootstrap
 HTML_TEMPLATE = '''
