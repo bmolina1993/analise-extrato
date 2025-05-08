@@ -2,3 +2,4 @@ Flask
 PyMuPDF
 pandas
 fpdf
+bcrypt
