@@ -1,4 +1,3 @@
-
 from flask import Flask, request, render_template_string, send_file, redirect, url_for, session
 import os
 import fitz  # PyMuPDF
@@ -7,58 +6,37 @@ from werkzeug.utils import secure_filename
 from fpdf import FPDF
 import io
 from functools import wraps
+import sqlite3
+import bcrypt
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 app.config['UPLOAD_FOLDER'] = 'uploads'
-
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-def extract_text_from_pdf(path):
-    text = ""
-    doc = fitz.open(path)
-    for page in doc:
-        text += page.get_text()
-    return text
+# Inicializa banco de dados
+def init_db():
+    with sqlite3.connect('users.db') as conn:
+        conn.execute('''CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            arquivo TEXT,
+            total_entradas REAL,
+            total_saidas REAL,
+            renda_media REAL,
+            qtd_entradas INTEGER,
+            qtd_saidas INTEGER,
+            data_analisada TEXT
+        )''')
+init_db()
 
-def analyze_text(text):
-    lines = text.splitlines()
-    entries = []
-    exits = []
-    for line in lines:
-        if 'Pix recebido' in line or 'Transferência recebida' in line:
-            for s in line.split():
-                if s.startswith('R$'):
-                    value = float(s.replace('R$', '').replace('.', '').replace(',', '.'))
-                    entries.append(value)
-        elif 'Pix enviado' in line or 'Pagamento' in line:
-            for s in line.split():
-                if s.startswith('R$'):
-                    value = float(s.replace('R$', '').replace('.', '').replace(',', '.'))
-                    exits.append(value)
-    return {
-        'total_entradas': sum(entries),
-        'total_saidas': sum(exits),
-        'renda_media_aproximada': sum(entries) / 3 if entries else 0,
-        'qtd_entradas': len(entries),
-        'qtd_saidas': len(exits)
-    }
-
-def generate_report(results):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Extrato Analysis Report", ln=True, align='C')
-    pdf.ln(10)
-    for r in results:
-        for k, v in r.items():
-            pdf.cell(200, 10, txt=f"{k}: {v}", ln=True)
-        pdf.ln(5)
-    output = io.BytesIO()
-    pdf.output(output)
-    output.seek(0)
-    return output
-
+# Decorador de login
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -67,30 +45,65 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        user = request.form.get('username')
-        password = request.form.get('password')
-        if user == 'admin' and password == '1234':
-            session['logged_in'] = True
-            return redirect(url_for('index'))
-        else:
-            return '<h3>Invalid login</h3><a href="/login">Try again</a>'
-    return '''
-    <h2>Login</h2>
-    <form method="post">
-        Username: <input type="text" name="username"><br>
-        Password: <input type="password" name="password"><br>
-        <input type="submit" value="Login">
-    </form>
-    '''
+# Autenticação
 
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
+def get_user(username):
+    with sqlite3.connect('users.db') as conn:
+        cur = conn.execute("SELECT * FROM users WHERE username = ?", (username,))
+        return cur.fetchone()
 
+def create_user(username, password):
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    try:
+        with sqlite3.connect('users.db') as conn:
+            conn.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+def check_password(password, password_hash):
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash)
+
+# Extração e análise dos PDFs
+def extract_text_from_pdf(path):
+    text = ""
+    try:
+        doc = fitz.open(path)
+        for page in doc:
+            text += page.get_text("text")
+    except Exception as e:
+        text = ""
+    return text
+
+def analyze_text(text):
+    lines = text.splitlines()
+    entradas, saidas = [], []
+    for line in lines:
+        if 'Pix recebido' in line or 'Transferência recebida' in line:
+            for s in line.split():
+                if 'R$' in s:
+                    try:
+                        valor = float(s.replace('R$', '').replace('.', '').replace(',', '.'))
+                        entradas.append(valor)
+                    except:
+                        continue
+        elif 'Pix enviado' in line or 'Pagamento' in line:
+            for s in line.split():
+                if 'R$' in s:
+                    try:
+                        valor = float(s.replace('R$', '').replace('.', '').replace(',', '.'))
+                        saidas.append(valor)
+                    except:
+                        continue
+    return {
+        'total_entradas': sum(entradas),
+        'total_saidas': sum(saidas),
+        'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
+        'qtd_entradas': len(entradas),
+        'qtd_saidas': len(saidas)
+    }
+
+# HTML com Bootstrap
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -124,16 +137,13 @@ HTML_TEMPLATE = '''
         </div>
     </div>
     {% endfor %}
-    <a href="/download-relatorio" class="btn btn-success mt-4">Baixar Relatório em PDF</a>
     {% endif %}
 </div>
 </body>
 </html>
 '''
 
-results_cache = []
-
-@app.route('/', methods=['GET'])
+@app.route('/')
 @login_required
 def index():
     return render_template_string(HTML_TEMPLATE, resultados=None)
@@ -141,29 +151,31 @@ def index():
 @app.route('/upload', methods=['POST'])
 @login_required
 def upload_files():
-    global results_cache
     uploaded_files = request.files.getlist("files")
     resultados = []
+    username = session.get('username', 'anonimo')
     for file in uploaded_files:
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        text = extract_text_from_pdf(filepath)
-        result = analyze_text(text)
-        result['arquivo'] = filename
-        resultados.append(result)
-    results_cache = resultados
+        texto = extract_text_from_pdf(filepath)
+        resultado = analyze_text(texto)
+        resultado['arquivo'] = filename
+        resultados.append(resultado)
+
+        # Salvar no histórico
+        with sqlite3.connect('users.db') as conn:
+            conn.execute('''INSERT INTO historico (username, arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, data_analisada)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                         (username, filename, resultado['total_entradas'], resultado['total_saidas'], resultado['renda_media_aproximada'],
+                          resultado['qtd_entradas'], resultado['qtd_saidas'], datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     return render_template_string(HTML_TEMPLATE, resultados=resultados)
 
-@app.route('/download-relatorio')
-@login_required
-def download_relatorio():
-    output = generate_report(results_cache)
-    return send_file(output, as_attachment=True, download_name="relatorio_analise.pdf", mimetype='application/pdf')
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    import os
-port = int(os.environ.get("PORT", 10000))
-app.run(host="0.0.0.0", port=port, debug=False)
-
-
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
