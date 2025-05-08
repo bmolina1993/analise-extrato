@@ -123,45 +123,33 @@ def extract_text_from_pdf(path):
 def analyze_text(text):
     lines = text.splitlines()
     entradas, saidas = [], []
-    i = 0
-    while i < len(lines):
-        line = lines[i]
+    for idx, line in enumerate(lines):
         line_lower = line.lower()
-        valor = None
 
-        # Verifica se a linha indica entrada
-        if 'pix recebida' in line_lower or 'transferência recebida' in line_lower:
-            j = i
-            while j <= i + 3 and j < len(lines):  # procura em até 3 linhas seguintes
-                if 'r$' in lines[j].lower():
-                    for s in lines[j].split():
-                        if 'r$' in s.lower():
-                            try:
-                                valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                                entradas.append(valor)
-                                break
-                            except:
-                                pass
-                    break
-                j += 1
+        # Agrupa até 2 linhas para evitar perda de valor separado
+        bloco = line
+        if idx + 1 < len(lines):
+            bloco += " " + lines[idx + 1]
 
-        # Verifica se a linha indica saída
-        elif 'pix enviada' in line_lower or 'pagamento' in line_lower or 'retirado' in line_lower or 'reserva' in line_lower:
-            j = i
-            while j <= i + 3 and j < len(lines):  # procura em até 3 linhas seguintes
-                if 'r$' in lines[j].lower():
-                    for s in lines[j].split():
-                        if 'r$' in s.lower():
-                            try:
-                                valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                                saidas.append(valor)
-                                break
-                            except:
-                                pass
-                    break
-                j += 1
-
-        i += 1
+        if 'pix recebida' in bloco.lower() or 'transferência recebida' in bloco.lower():
+            for s in bloco.split():
+                if 'r$' in s.lower():
+                    try:
+                        valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
+                        entradas.append(valor)
+                        break
+                    except:
+                        continue
+        elif ('pix enviada' in bloco.lower() or 'pagamento' in bloco.lower() or 'retirado' in bloco.lower()
+              or 'reserva' in bloco.lower()):
+            for s in bloco.split():
+                if 'r$' in s.lower():
+                    try:
+                        valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
+                        saidas.append(valor)
+                        break
+                    except:
+                        continue
 
     return {
         'total_entradas': sum(entradas),
