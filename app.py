@@ -106,6 +106,8 @@ def user_login():
 
 # Extração e análise dos PDFs
 def extract_text_from_pdf(path):
+    print("--- TEXTO EXTRAÍDO DO PDF ---")
+print(texto)
     text = ""
     try:
         doc = fitz.open(path)
@@ -114,7 +116,7 @@ def extract_text_from_pdf(path):
             if not page_text.strip():
                 blocks = page.get_text("blocks")
                 page_text = " ".join([b[4] for b in blocks if isinstance(b[4], str)])
-            text += page_text + "\n"
+            text += page_text + "\\n"
     except Exception as e:
         print(f"Erro ao extrair texto: {e}")
     return text
