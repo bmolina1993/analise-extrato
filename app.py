@@ -120,10 +120,11 @@ def extract_text_from_pdf(path):
     return text
 
 def analyze_text(text):
+    import re
     lines = text.splitlines()
     entradas, saidas = [], []
     suspeitas = []
-    contexto = None  # entrada ou saida
+    contexto = None  # entrada ou saída
 
     for i, line in enumerate(lines):
         l = line.lower()
@@ -132,28 +133,41 @@ def analyze_text(text):
         elif any(p in l for p in ['pix enviada', 'pagamento', 'retirado', 'reserva']):
             contexto = 'saida'
 
-        # procura valor R$ na linha
-        if 'r$' in l:
-            for s in line.split():
-                if 'r$' in s.lower():
-                    try:
-                        valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                        if contexto == 'entrada':
-                            if valor < 0:
-                                suspeitas.append(f"Entrada com valor negativo: R$ {valor:.2f}")
-                            entradas.append(abs(valor))
-                        elif contexto == 'saida':
-                            if valor > 0:
-                                suspeitas.append(f"Saída com valor positivo: R$ {valor:.2f}")
-                            saidas.append(abs(valor))
-                        contexto = None  # reset após uso
-                        break
-                    except:
-                        continue
+        # Captura valores no formato R$ 300,00 ou R$300,00
+        valores = re.findall(r'r\$\s*[\d\.,-]+', line, re.IGNORECASE)
+        for v in valores:
+            try:
+                valor = float(
+                    v.lower()
+                    .replace('r$', '')
+                    .replace(' ', '')
+                    .replace('.', '')
+                    .replace(',', '.')
+                )
+                if contexto == 'entrada':
+                    if valor < 0:
+                        suspeitas.append(f"Entrada com valor negativo: R$ {valor:.2f}")
+                    entradas.append(abs(valor))
+                elif contexto == 'saida':
+                    if valor > 0:
+                        suspeitas.append(f"Saída com valor positivo: R$ {valor:.2f}")
+                    saidas.append(abs(valor))
+                contexto = None
+            except:
+                continue
 
     autenticidade = "verdadeiro" if not suspeitas else "possivelmente adulterado"
 
     return {
+        'total_entradas': sum(entradas),
+        'total_saidas': sum(saidas),
+        'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
+        'qtd_entradas': len(entradas),
+        'qtd_saidas': len(saidas),
+        'autenticidade': autenticidade,
+        'motivos': suspeitas
+    }
+
         'total_entradas': sum(entradas),
         'total_saidas': sum(saidas),
         'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
