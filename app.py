@@ -228,14 +228,24 @@ def user_login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    admin_key_required = 'super123'
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        admin_key = request.form.get('admin_key')
+        if admin_key != admin_key_required:
+            return '<h3>Chave de administrador inválida</h3><a href="/register">Tente novamente</a>'
         if create_user(username, password):
             return redirect(url_for('user_login'))
         else:
             return 'Usuário já existe. <a href="/register">Tente novamente</a>'
-    return '''<h2>Cadastro</h2><form method="post">Usuário: <input type="text" name="username"><br>Senha: <input type="password" name="password"><br><input type="submit" value="Cadastrar"></form>'''
+    return '''<h2>Cadastro</h2>
+    <form method="post">
+        Usuário: <input type="text" name="username"><br>
+        Senha: <input type="password" name="password"><br>
+        Chave de Administrador: <input type="password" name="admin_key"><br>
+        <input type="submit" value="Cadastrar">
+    </form>'''
 
 
 def get_user(username):
