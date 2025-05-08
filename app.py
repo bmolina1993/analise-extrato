@@ -110,9 +110,14 @@ def extract_text_from_pdf(path):
     try:
         doc = fitz.open(path)
         for page in doc:
-            text += page.get_text("text")
+            page_text = page.get_text("text")
+            if not page_text.strip():
+                blocks = page.get_text("blocks")
+                page_text = " ".join([b[4] for b in blocks if isinstance(b[4], str)])
+            text += page_text + "
+"
     except Exception as e:
-        text = ""
+        print(f"Erro ao extrair texto: {e}")
     return text
 
 def analyze_text(text):
