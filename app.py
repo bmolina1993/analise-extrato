@@ -123,40 +123,45 @@ def extract_text_from_pdf(path):
 def analyze_text(text):
     lines = text.splitlines()
     entradas, saidas = [], []
-    for idx, line in enumerate(lines):
-        line_lower = line.lower()
+    suspeitas = []
 
-        # Agrupa até 2 linhas para evitar perda de valor separado
-        bloco = line
-        if idx + 1 < len(lines):
-            bloco += " " + lines[idx + 1]
+    for idx in range(len(lines)):
+        bloco = " ".join(lines[idx:idx+3])  # junta até 3 linhas
+        bloco_lower = bloco.lower()
 
-        if 'pix recebida' in bloco.lower() or 'transferência recebida' in bloco.lower():
+        if 'pix recebida' in bloco_lower or 'transferência recebida' in bloco_lower:
             for s in bloco.split():
                 if 'r$' in s.lower():
                     try:
                         valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                        entradas.append(valor)
+                        if valor < 0:
+                            suspeitas.append("Entrada com valor negativo: R$ {:.2f}".format(valor))
+                        entradas.append(abs(valor))
                         break
                     except:
                         continue
-        elif ('pix enviada' in bloco.lower() or 'pagamento' in bloco.lower() or 'retirado' in bloco.lower()
-              or 'reserva' in bloco.lower()):
+        elif ('pix enviada' in bloco_lower or 'pagamento' in bloco_lower or 'retirado' in bloco_lower or 'reserva' in bloco_lower):
             for s in bloco.split():
                 if 'r$' in s.lower():
                     try:
                         valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
-                        saidas.append(valor)
+                        if valor > 0:
+                            suspeitas.append("Saída com valor positivo: R$ {:.2f}".format(valor))
+                        saidas.append(abs(valor))
                         break
                     except:
                         continue
+
+    autenticidade = "verdadeiro" if not suspeitas else "possivelmente adulterado"
 
     return {
         'total_entradas': sum(entradas),
         'total_saidas': sum(saidas),
         'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
         'qtd_entradas': len(entradas),
-        'qtd_saidas': len(saidas)
+        'qtd_saidas': len(saidas),
+        'autenticidade': autenticidade,
+        'motivos': suspeitas
     }
 
 # HTML com Bootstrap
