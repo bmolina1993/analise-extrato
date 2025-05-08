@@ -134,7 +134,42 @@ def analyze_text(text):
             j = i
             while j <= i + 3 and j < len(lines):  # procura em até 3 linhas seguintes
                 if 'r$' in lines[j].lower():
-                    for s in lines[j].split(
+                    for s in lines[j].split():
+                        if 'r$' in s.lower():
+                            try:
+                                valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
+                                entradas.append(valor)
+                                break
+                            except:
+                                pass
+                    break
+                j += 1
+
+        # Verifica se a linha indica saída
+        elif 'pix enviada' in line_lower or 'pagamento' in line_lower or 'retirado' in line_lower or 'reserva' in line_lower:
+            j = i
+            while j <= i + 3 and j < len(lines):  # procura em até 3 linhas seguintes
+                if 'r$' in lines[j].lower():
+                    for s in lines[j].split():
+                        if 'r$' in s.lower():
+                            try:
+                                valor = float(s.lower().replace('r$', '').replace('.', '').replace(',', '.'))
+                                saidas.append(valor)
+                                break
+                            except:
+                                pass
+                    break
+                j += 1
+
+        i += 1
+
+    return {
+        'total_entradas': sum(entradas),
+        'total_saidas': sum(saidas),
+        'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
+        'qtd_entradas': len(entradas),
+        'qtd_saidas': len(saidas)
+    }
 
 # HTML com Bootstrap
 HTML_TEMPLATE = '''
