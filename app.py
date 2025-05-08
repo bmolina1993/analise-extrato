@@ -177,6 +177,15 @@ def analyze_text(text):
         'motivos': suspeitas
     }
 
+        'total_entradas': sum(entradas),
+        'total_saidas': sum(saidas),
+        'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
+        'qtd_entradas': len(entradas),
+        'qtd_saidas': len(saidas),
+        'autenticidade': autenticidade,
+        'motivos': suspeitas
+    }
+
 @app.route('/')
 @login_required
 def index():
