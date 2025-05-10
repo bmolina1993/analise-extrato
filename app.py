@@ -285,7 +285,7 @@ def upload_files():
         resultados.append(resultado)
 
     session['resultados'] = resultados
-    return redirect(url_for('resultado'))
+    return redirect(url_for('historico'))
 
 # ❌ Removido: rota duplicada que salva no banco separado com variáveis indefinidas
 # ✅ Substituída pela lógica correta já implementada na rota /upload
