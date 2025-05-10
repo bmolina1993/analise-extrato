@@ -271,7 +271,8 @@ def upload_files():
             resultado['renda_compatível'] = False
 
         # Garantir que os motivos sejam uma lista separada por ' | '
-        resultado['motivos'] = resultado['motivos'].split(' | ') if resultado['motivos'] else []
+        if isinstance(resultado['motivos'], str):
+            resultado['motivos'] = resultado['motivos'].split(' | ') if resultado['motivos'] else []
 
         with sqlite3.connect('users.db') as conn:
             conn.execute('''INSERT INTO historico (username, arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, autenticidade, motivos, gastos_fixos, renda_compatível, data_analisada)
