@@ -65,12 +65,12 @@ HTML_TEMPLATE = '''
                 <span class="text-danger">Não</span>
               {% endif %} (Gastos: R$ {{ r.get('gastos_fixos', 'N/A') }})
             </p>
-                 {% if r['motivos'] %}
-                  {% for motivo in r['motivos']|join(' | ').split(' | ') if motivo %}
-                <li>{{ motivo }}</li>
-              {% endfor %}
-            {% endif %}
-            </ul>
+            {% if r['motivos'] %}
+             <ul>
+                {% for motivo in r['motivos'] %}
+                  <li>{{ motivo }}</li>
+                {% endfor %}
+              </ul>
             {% endif %}
         </div>
     </div>
