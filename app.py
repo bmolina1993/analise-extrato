@@ -39,6 +39,7 @@ HTML_TEMPLATE = '''
         <input class="form-control" type="number" step="0.01" name="valor_condominio" required>
         <button class="btn btn-primary mt-3" type="submit">Analisar</button>
     </form>
+    <a href="/exportar-pdf" class="btn btn-outline-secondary mt-3">Exportar Histórico em PDF</a>
 
     {% if resultados %}
     <h2 class="mt-5">Resultados:</h2>
@@ -285,52 +286,26 @@ def upload_files():
     session['resultados'] = resultados
     return redirect(url_for('resultado'))
 
-@app.route('/resultado')
-@login_required
-def resultado():
-    resultado = {
-        'nome_arquivo': nome_arquivo,
-        'renda_mensal': renda_mensal,
-        'motivos': ['Motivo 1', 'Motivo 2']  # ← Exemplo: lista de motivos detectados
-    }
-
-    # 🔁 Transforma lista de motivos em string para armazenar no banco
-    motivos_str = " | ".join(resultado['motivos']) if resultado['motivos'] else ""
-
-    # Salvar no banco
-    conn = sqlite3.connect('resultados.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO resultados (nome_arquivo, renda_mensal, motivos)
-        VALUES (?, ?, ?)
-    ''', (resultado['nome_arquivo'], resultado['renda_mensal'], motivos_str))
-    conn.commit()
-    conn.close()
-
-    return redirect(url_for('historico'))
+# ❌ Removido: rota duplicada que salva no banco separado com variáveis indefinidas
+# ✅ Substituída pela lógica correta já implementada na rota /upload
+# (Se necessário, podemos recuperar essa lógica com dados válidos e banco unificado)
 
 
 @app.route('/historico')
+@login_required
 def historico():
-    conn = sqlite3.connect('resultados.db')
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM resultados ORDER BY id DESC')
-    rows = cursor.fetchall()
-    conn.close()
+    username = session.get('username')
+    with sqlite3.connect('users.db') as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute("SELECT arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, autenticidade, motivos, gastos_fixos, renda_compatível, data_analisada FROM historico WHERE username = ? ORDER BY data_analisada DESC", (username,))
+        rows = cur.fetchall()
 
-    # 🔁 Transforma string de motivos em lista antes de exibir
     resultados = []
     for r in rows:
         motivos = r['motivos'].split(' | ') if r['motivos'] else []
-        resultados.append({
-            'id': r['id'],
-            'nome_arquivo': r['nome_arquivo'],
-            'renda_mensal': r['renda_mensal'],
-            'motivos': motivos
-        })
+        resultados.append({**dict(r), 'motivos': motivos})
 
-    return render_template('historico.html', resultados=resultados)
+    return render_template_string(HTML_TEMPLATE, resultados=resultados)
 @app.route('/exportar-pdf')
 @login_required
 def exportar_pdf():
