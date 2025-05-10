@@ -65,13 +65,30 @@ HTML_TEMPLATE = '''
                 <span class="text-danger">Não</span>
               {% endif %} (Gastos: R$ {{ r.get('gastos_fixos', 'N/A') }})
             </p>
-            {% if r['motivos'] %}
-             <ul>
-                {% for motivo in r['motivos'] %}
-                  <li>{{ motivo }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
+            <table>
+              <tr>
+                <th>Arquivo</th>
+                <th>Renda</th>
+                <th>Motivos</th>
+              </tr>
+              {% for r in resultados %}
+              <tr>
+                <td>{{ r.nome_arquivo }}</td>
+                <td>{{ r.renda_mensal }}</td>
+                <td>
+                  {% if r.motivos %}
+                    <ul>
+                      {% for m in r.motivos %}
+                        <li>{{ m }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    Nenhum
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </table>
         </div>
     </div>
     {% endfor %}
