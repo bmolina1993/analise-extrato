@@ -271,18 +271,49 @@ def upload_files():
 @app.route('/resultado')
 @login_required
 def resultado():
-    resultados = session.pop('resultados', [])
-    return render_template_string(HTML_TEMPLATE, resultados=resultados)
+    resultado = {
+        'nome_arquivo': nome_arquivo,
+        'renda_mensal': renda_mensal,
+        'motivos': ['Motivo 1', 'Motivo 2']  # ← Exemplo: lista de motivos detectados
+    }
+
+    # 🔁 Transforma lista de motivos em string para armazenar no banco
+    motivos_str = " | ".join(resultado['motivos']) if resultado['motivos'] else ""
+
+    # Salvar no banco
+    conn = sqlite3.connect('resultados.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO resultados (nome_arquivo, renda_mensal, motivos)
+        VALUES (?, ?, ?)
+    ''', (resultado['nome_arquivo'], resultado['renda_mensal'], motivos_str))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('historico'))
+
 
 @app.route('/historico')
-@login_required
 def historico():
-    username = session.get('username')
-    with sqlite3.connect('users.db') as conn:
-        cur = conn.execute("SELECT arquivo, total_entradas, total_saidas, renda_media, qtd_entradas, qtd_saidas, autenticidade, motivos, gastos_fixos, renda_compatível, data_analisada FROM historico WHERE username = ? ORDER BY data_analisada DESC", (username,))
-        dados = [dict(zip([column[0] for column in cur.description], row)) for row in cur.fetchall()]
-    return render_template_string(HTML_TEMPLATE, resultados=dados)
+    conn = sqlite3.connect('resultados.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM resultados ORDER BY id DESC')
+    rows = cursor.fetchall()
+    conn.close()
 
+    # 🔁 Transforma string de motivos em lista antes de exibir
+    resultados = []
+    for r in rows:
+        motivos = r['motivos'].split(' | ') if r['motivos'] else []
+        resultados.append({
+            'id': r['id'],
+            'nome_arquivo': r['nome_arquivo'],
+            'renda_mensal': r['renda_mensal'],
+            'motivos': motivos
+        })
+
+    return render_template('historico.html', resultados=resultados)
 @app.route('/exportar-pdf')
 @login_required
 def exportar_pdf():
