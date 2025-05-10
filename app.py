@@ -52,19 +52,20 @@ HTML_TEMPLATE = '''
             <p>Qtd de Entradas: {{ r['qtd_entradas'] }}</p>
             <p>Qtd de Saídas: {{ r['qtd_saidas'] }}</p>
             <p class="fw-bold">Autenticidade:
-              {% if r['autenticidade'] == 'verdadeiro' %}
-                <span class="text-success">{{ r['autenticidade'] }}</span>
-              {% else %}
-                <span class="text-danger">{{ r['autenticidade'] }}</span>
+            {% if r.get('autenticidade') == 'verdadeiro' %}
+            <span class="text-success">{{ r.get('autenticidade') }}</span>
+            {% else %}
+            <span class="text-danger">{{ r.get('autenticidade', 'N/A') }}</span>
               {% endif %}
             </p>
             <p class="fw-bold">Renda é compatível com os gastos?:
-              {% if r['renda_compatível'] %}
+              {% if r.get('renda_compatível') %}
                 <span class="text-success">Sim</span>
               {% else %}
                 <span class="text-danger">Não</span>
-              {% endif %} (Gastos: R$ {{ r['gastos_fixos'] }})
+              {% endif %} (Gastos: R$ {{ r.get('gastos_fixos', 'N/A') }})
             </p>
+
             {% if r['motivos'] %}
             <ul class="text-danger">
               {% for motivo in r['motivos'].split(' | ') if motivo %}
