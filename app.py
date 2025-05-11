@@ -39,7 +39,10 @@ HTML_TEMPLATE = '''
         <input class="form-control" type="number" step="0.01" name="valor_condominio" required>
         <button class="btn btn-primary mt-3" type="submit">Analisar</button>
     </form>
-    <a href="/exportar-pdf" class="btn btn-outline-secondary mt-3">Exportar Histórico em PDF</a>
+    <button form="form-pdf" class="btn btn-outline-secondary mt-3">Exportar PDF (sem salvar histórico)</button>
+    <form id="form-pdf" action="/exportar-pdf-temporario" method="post" enctype="multipart/form-data" style="display:none">
+        <input type="hidden" name="temp_pdf" value="1">
+    </form>
 
     {% if resultados %}
     <h2 class="mt-5">Resultados:</h2>
@@ -310,6 +313,7 @@ def historico():
 @app.route('/exportar-pdf')
 @login_required
 def exportar_pdf():
+    # versão que usa o histórico salvo
     username = session.get('username')
     buffer = io.BytesIO()
     pdf = FPDF()
@@ -325,12 +329,54 @@ def exportar_pdf():
 
     pdf.set_font("Arial", size=10)
     for r in resultados:
-        pdf.multi_cell(0, 8, f"Arquivo: {r[0]}\nTotal Entradas: R$ {r[1]:.2f}\nTotal Saídas: R$ {r[2]:.2f}\nRenda Média: R$ {r[3]:.2f}\nEntradas: {r[4]} / Saídas: {r[5]}\nAutenticidade: {r[6]}\nGastos Fixos: R$ {r[8]:.2f}\nRenda Compatível: {r[9]}\nMotivos: {r[7]}\nData: {r[10]}\n", border=1)
+        pdf.multi_cell(0, 8, f"Arquivo: {r[0]}
+Total Entradas: R$ {r[1]:.2f}
+Total Saídas: R$ {r[2]:.2f}
+Renda Média: R$ {r[3]:.2f}
+Entradas: {r[4]} / Saídas: {r[5]}
+Autenticidade: {r[6]}
+Gastos Fixos: R$ {r[8]:.2f}
+Renda Compatível: {r[9]}
+Motivos: {r[7]}
+Data: {r[10]}
+", border=1)
         pdf.ln(2)
 
     pdf.output(buffer)
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name='relatorio_extratos.pdf', mimetype='application/pdf')
+
+@app.route('/exportar-pdf-temporario', methods=['POST'])
+@login_required
+def exportar_pdf_temporario():
+    # usa os resultados da sessão (último upload)
+    resultados = session.get('resultados', [])
+    buffer = io.BytesIO()
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, "Análise Temporária de Extratos", ln=True, align='C')
+    pdf.ln(5)
+
+    pdf.set_font("Arial", size=10)
+    for r in resultados:
+        motivos = " | ".join(r['motivos']) if isinstance(r['motivos'], list) else r['motivos']
+        pdf.multi_cell(0, 8, f"Arquivo: {r['arquivo']}
+Total Entradas: R$ {r['total_entradas']:.2f}
+Total Saídas: R$ {r['total_saidas']:.2f}
+Renda Média: R$ {r['renda_media_aproximada']:.2f}
+Entradas: {r['qtd_entradas']} / Saídas: {r['qtd_saidas']}
+Autenticidade: {r['autenticidade']}
+Gastos Fixos: R$ {r['gastos_fixos']:.2f}
+Renda Compatível: {'Sim' if r['renda_compatível'] else 'Não'}
+Motivos: {motivos}
+", border=1)
+        pdf.ln(2)
+
+    pdf.output(buffer)
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name='relatorio_extrato_temporario.pdf', mimetype='application/pdf')
 
 @app.route('/logout')
 def logout():
