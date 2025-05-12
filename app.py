@@ -329,17 +329,20 @@ def exportar_pdf():
 
     pdf.set_font("Arial", size=10)
     for r in resultados:
-        pdf.multi_cell(0, 8, f"Arquivo: {r[0]}
-Total Entradas: R$ {r[1]:.2f}
-Total Saídas: R$ {r[2]:.2f}
-Renda Média: R$ {r[3]:.2f}
-Entradas: {r[4]} / Saídas: {r[5]}
-Autenticidade: {r[6]}
-Gastos Fixos: R$ {r[8]:.2f}
-Renda Compatível: {r[9]}
-Motivos: {r[7]}
-Data: {r[10]}
-", border=1)
+        pdf.multi_cell(0, 8,
+    f"Arquivo: {r[0]}\n"
+    f"Total Entradas: R$ {r[1]:.2f}\n"
+    f"Total Saídas: R$ {r[2]:.2f}\n"
+    f"Renda Média: R$ {r[3]:.2f}\n"
+    f"Entradas: {r[4]} / Saídas: {r[5]}\n"
+    f"Autenticidade: {r[6]}\n"
+    f"Gastos Fixos: R$ {r[8]:.2f}\n"
+    f"Renda Compatível: {r[9]}\n"
+    f"Motivos: {r[7]}\n"
+    f"Data: {r[10]}\n",
+    border=1
+)
+
         pdf.ln(2)
 
     pdf.output(buffer)
