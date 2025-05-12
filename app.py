@@ -362,16 +362,19 @@ def exportar_pdf_temporario():
     pdf.set_font("Arial", size=10)
     for r in resultados:
         motivos = " | ".join(r['motivos']) if isinstance(r['motivos'], list) else r['motivos']
-        pdf.multi_cell(0, 8, f"Arquivo: {r['arquivo']}
-Total Entradas: R$ {r['total_entradas']:.2f}
-Total Saídas: R$ {r['total_saidas']:.2f}
-Renda Média: R$ {r['renda_media_aproximada']:.2f}
-Entradas: {r['qtd_entradas']} / Saídas: {r['qtd_saidas']}
-Autenticidade: {r['autenticidade']}
-Gastos Fixos: R$ {r['gastos_fixos']:.2f}
-Renda Compatível: {'Sim' if r['renda_compatível'] else 'Não'}
-Motivos: {motivos}
-", border=1)
+        pdf.multi_cell(0, 8, 
+    f"Arquivo: {r[0]}\n"
+    f"Total Entradas: R$ {r[1]:.2f}\n"
+    f"Total Saídas: R$ {r[2]:.2f}\n"
+    f"Renda Média: R$ {r[3]:.2f}\n"
+    f"Entradas: {r[4]} / Saídas: {r[5]}\n"
+    f"Autenticidade: {r[6]}\n"
+    f"Gastos Fixos: R$ {r[8]:.2f}\n"
+    f"Renda Compatível: {r[9]}\n"
+    f"Motivos: {r[7]}\n"
+    f"Data: {r[10]}\n", 
+    border=1
+)
         pdf.ln(2)
 
     pdf.output(buffer)
