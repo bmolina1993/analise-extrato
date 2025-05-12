@@ -50,8 +50,8 @@ HTML_TEMPLATE = '''
     <div class="card mt-3">
         <div class="card-body">
             <h5 class="card-title">Arquivo: {{ r['arquivo'] }}</h5>
-            <p>Total de Entradas: R$ {{ r['total_entradas'] }}</p>
-            <p>Total de Saídas: R$ {{ r['total_saidas'] }}</p>
+            <p>Total de Entradas: R$ {{ r['total_entradas'] | round(2) }}</p>
+            <p>Total de Saídas: R$ {{ r['total_saidas'] | round(2) }}</p>
             <p>Renda Média Aproximada: R$ {{ r['renda_media_aproximada'] | default(0) | round(2) }}</p>
             <p>Qtd de Entradas: {{ r['qtd_entradas'] }}</p>
             <p>Qtd de Saídas: {{ r['qtd_saidas'] }}</p>
@@ -67,7 +67,7 @@ HTML_TEMPLATE = '''
                 <span class="text-success">Sim</span>
               {% else %}
                 <span class="text-danger">Não</span>
-              {% endif %} (Gastos: R$ {{ r.get('gastos_fixos', 'N/A') }})
+              {% endif %} (Gastos: R$ {{ r.get('gastos_fixos', 0) | round(2) }})
             </p>
             <table>
               <tr>
