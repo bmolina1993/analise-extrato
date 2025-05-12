@@ -236,7 +236,7 @@ def analyze_text(text):
     return {
         'total_entradas': sum(entradas),
         'total_saidas': sum(saidas),
-        'renda_media_aproximada': sum(entradas) / 3 if entradas else 0,
+        'renda_media_aproximada': round(sum(entradas) / 3, 2) if len(entradas) >= 3 else round(sum(entradas), 2),
         'qtd_entradas': len(entradas),
         'qtd_saidas': len(saidas),
         'autenticidade': autenticidade,
