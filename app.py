@@ -52,7 +52,7 @@ HTML_TEMPLATE = '''
             <h5 class="card-title">Arquivo: {{ r['arquivo'] }}</h5>
             <p>Total de Entradas: R$ {{ r['total_entradas'] }}</p>
             <p>Total de Saídas: R$ {{ r['total_saidas'] }}</p>
-            <p>Renda Média Aproximada: R$ {{ r['renda_media_aproximada'] }}</p>
+            <p>Renda Média Aproximada: R$ {{ r['renda_media_aproximada'] | default(0) | round(2) }}</p>
             <p>Qtd de Entradas: {{ r['qtd_entradas'] }}</p>
             <p>Qtd de Saídas: {{ r['qtd_saidas'] }}</p>
             <p class="fw-bold">Autenticidade:
@@ -333,7 +333,7 @@ def exportar_pdf():
         f"Arquivo: {r[0]}\n"
         f"Total Entradas: R$ {r[1]:.2f}\n"
         f"Total Saídas: R$ {r[2]:.2f}\n"
-        f"Renda Média: R$ {r[3]:.2f}\n"
+        f"Renda Média: R$ {float(r[3]) if r[3] else 0.00:.2f}\n"
         f"Entradas: {r[4]} / Saídas: {r[5]}\n"
         f"Autenticidade: {r[6]}\n"
         f"Gastos Fixos: R$ {r[8]:.2f}\n"
@@ -369,7 +369,7 @@ def exportar_pdf_temporario():
         f"Arquivo: {r[0]}\n"
         f"Total Entradas: R$ {r[1]:.2f}\n"
         f"Total Saídas: R$ {r[2]:.2f}\n"
-        f"Renda Média: R$ {r[3]:.2f}\n"
+        f"Renda Média: R$ {float(r[3]) if r[3] else 0.00:.2f}\n"
         f"Entradas: {r[4]} / Saídas: {r[5]}\n"
         f"Autenticidade: {r[6]}\n"
         f"Gastos Fixos: R$ {r[8]:.2f}\n"
