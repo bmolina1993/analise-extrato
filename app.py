@@ -362,7 +362,7 @@ def exportar_pdf_temporario():
     pdf.set_font("Arial", size=10)
     for r in resultados:
         motivos = " | ".join(r['motivos']) if isinstance(r['motivos'], list) else r['motivos']
-        ppdf.multi_cell(0, 8,
+       pdf.multi_cell(0, 8,
     f"Arquivo: {r[0]}\n"
     f"Total Entradas: R$ {r[1]:.2f}\n"
     f"Total Saídas: R$ {r[2]:.2f}\n"
@@ -375,6 +375,7 @@ def exportar_pdf_temporario():
     f"Data: {r[10]}\n",
     border=1
 )
+
         pdf.ln(2)
 
     pdf.output(buffer)
